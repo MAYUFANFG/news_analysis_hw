@@ -1,0 +1,339 @@
+{% extends 'base.html' %} {% block title %}
+  公視新聞熱門人物
+{% endblock %} {% block content %}
+  <div class="col-lg-12">
+    <h1>公視新聞熱門人物</h1>
+    <p>哪個人物在公視新聞中被報導最多次?</p>
+  </div>
+
+  <!-- column col-lg-6 card -->
+  <div class="col-lg-6 mb-5">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="h6 text-uppercase mb-0">篩選條件(公視新聞資料集)</h3>
+      </div>
+
+      <div class="card-body">
+        <div class="mb-3 row">
+          <label class="col-sm-3 form-label">新聞類別</label>
+          <div class="col-md-9">
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" value="全部" name="cateradio" id="cateAll" checked />
+              <label class="form-check-label" for="cateAll">全部</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" value="政治" name="cateradio" id="catePolitics" />
+              <label class="form-check-label" for="catePolitics">政治</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" value="政經" name="cateradio" id="cateEconomics" />
+              <label class="form-check-label" for="cateEconomics">政經</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" value="全球" name="cateradio" id="cateGlobal" />
+              <label class="form-check-label" for="cateGlobal">全球</label>
+            </div>
+            <div class="form-text">新聞類別內定值為"全部"新聞</div>
+          </div>
+        </div>
+        <!-- form group -->
+
+        <!-- Number of persons form group -->
+        <div class="mb-3 row">
+          <label class="col-md-3 form-label">多少個熱門詞?</label>
+          <div class="col-md-9">
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" value="5" name="topkradio" id="topk5" />
+              <label class="form-check-label" for="topk5">5</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" value="10" name="topkradio" id="topk10" checked />
+              <label class="form-check-label" for="topk10">10</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" value="20" name="topkradio" id="topk20" />
+              <label class="form-check-label" for="topk20">20</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" value="30" name="topkradio" id="topk30" />
+              <label class="form-check-label" for="topk30">30</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" value="40" name="topkradio" id="topk40" />
+              <label class="form-check-label" for="topk40">40</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" value="50" name="topkradio" id="topk50" />
+              <label class="form-check-label" for="topk50">50</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" value="60" name="topkradio" id="topk60" />
+              <label class="form-check-label" for="topk60">60</label>
+            </div>
+            <div class="form-text">內定值為10</div>
+          </div>
+        </div>
+        <!-- form group -->
+      </div>
+      <!-- card body -->
+    </div>
+    <!-- card -->
+  </div>
+  <!-- column -->
+
+  <!-- 繪圖區塊 -->
+  <div class="col-lg-6 mb-5">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="h6 text-uppercase mb-0">熱門關鍵字繪圖</h3>
+      </div>
+      <div class="card-body chart-container" style="min-height: 400px;">
+        <div id="chart-loading" class="text-center p-3">載入中...</div>
+        <canvas id="mychart" style="width:100%; height:100%; display:none;"></canvas>
+      </div>
+    </div>
+  </div>
+  <!-- column -->
+
+  <!-- 熱門關鍵字區塊 -->
+  <div class="col-lg-6 mb-5">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="h6 text-uppercase mb-0">熱門關鍵字(頻率次數)</h3>
+      </div>
+      <div class="card-body">
+        <ul id="topkeys"></ul>
+      </div>
+    </div>
+  </div>
+  <!-- column -->
+{% endblock %} {% block extra_js %}
+  <!-- chartjs js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.min.js"></script>
+
+  <!-- Your JavaScript Codes -->
+  <script>
+    $(document).ready(function() {
+      // 確認jQuery和Chart.js是否已加載
+      console.log("jQuery version:", $.fn.jquery);
+      console.log("Chart.js loaded:", typeof Chart !== 'undefined');
+      
+      // 確認DOM元素是否存在
+      console.log("Canvas element exists:", $('#mychart').length > 0);
+      console.log("Topkeys element exists:", $('#topkeys').length > 0);
+      
+      // 頁面加載時調用AJAX
+      call_ajax();
+      
+      // 類別選擇事件處理
+      $("input[name='cateradio']").on('change', function() {
+        console.log("類別選擇變更為:", $(this).val());
+        call_ajax();
+      });
+      
+      // 數量選擇事件處理
+      $("input[name='topkradio']").on('change', function() {
+        console.log("數量選擇變更為:", $(this).val());
+        call_ajax();
+      });
+    });
+    
+    // AJAX調用函數
+    function call_ajax() {
+      const cate = $("input[name='cateradio']:checked").val();
+      const topk = $("input[name='topkradio']:checked").val();
+      
+      console.log("發送AJAX請求：類別 =", cate, "顯示數量 =", topk);
+      
+      // 重置圖表區域狀態
+      $('#chart-loading').show();
+      $('#mychart').hide();
+      $('#topkeys').html('<li>載入中...</li>');
+      
+      $.ajax({
+        type: 'POST',
+        url: 'api_get_topPerson/',
+        data: { news_category: cate, topk: topk },
+        dataType: 'json',
+        success: function(received) {
+          console.log("收到響應:", received);
+          
+          chart_data = received.chart_data;
+          wf_pairs = received.wf_pairs;
+          
+          // 檢查數據是否為空
+          if (!chart_data.labels || chart_data.labels.length === 0) {
+            console.warn("沒有找到數據：", chart_data);
+            $('#chart-loading').html('<div class="alert alert-warning">類別 "' + cate + '" 沒有數據可顯示</div>');
+            $('#topkeys').html('<li class="text-warning">類別 "' + cate + '" 沒有數據</li>');
+            return;
+          }
+          
+          // 顯示資料
+          console.log("繪製圖表數據:", chart_data);
+          console.log("關鍵詞對:", wf_pairs);
+          
+          // 隱藏載入指示器，顯示canvas
+          $('#chart-loading').hide();
+          $('#mychart').show();
+          
+          try {
+            showChart(chart_data);
+            showTopKeys(wf_pairs);
+            console.log("圖表繪製完成");
+          } catch (error) {
+            console.error("繪製圖表時發生錯誤:", error);
+            $('#chart-loading').html('<div class="alert alert-danger">繪製圖表時發生錯誤: ' + error.message + '</div>').show();
+            $('#mychart').hide();
+          }
+        },
+        error: function(xhr, status, error) {
+          console.error("AJAX錯誤:", status, error);
+          console.error("詳細錯誤信息:", xhr.responseText);
+          
+          let errorMsg = "數據載入失敗";
+          try {
+            let response = JSON.parse(xhr.responseText);
+            if (response.message) {
+              errorMsg = response.message;
+            }
+          } catch (e) {
+            errorMsg += ": " + error;
+          }
+          
+          $('#chart-loading').html('<div class="alert alert-danger">' + errorMsg + '</div>').show();
+          $('#mychart').hide();
+          $('#topkeys').html('<li class="text-danger">' + errorMsg + '</li>');
+        }
+      });
+    }
+    
+    // 改進的圖表繪製函數
+    function showChart(chart_data) {
+      // 檢查Chart.js是否已加載
+      if (typeof Chart === 'undefined') {
+        console.error("Chart.js未加載！");
+        $('#chart-loading').html('<div class="alert alert-danger">Chart.js庫未加載，請刷新頁面再試</div>').show();
+        $('#mychart').hide();
+        return;
+      }
+      
+      // 確保canvas元素存在
+      let canvas = document.getElementById('mychart');
+      if (!canvas) {
+        console.error("找不到canvas元素！");
+        $('#chart-loading').html('<div class="alert alert-danger">找不到繪圖區域，請刷新頁面再試</div>').show();
+        return;
+      }
+      
+      console.log("Canvas元素已找到:", canvas);
+      
+      // 讀取數據
+      let values = chart_data.values;
+      let labels = chart_data.labels;
+      let category = chart_data.category;
+      
+      console.log("圖表數據:", {
+        category: category,
+        labels: labels,
+        values: values
+      });
+      
+      // 檢查數據有效性
+      if (!Array.isArray(labels) || !Array.isArray(values)) {
+        console.error("圖表數據格式無效:", chart_data);
+        $('#chart-loading').html('<div class="alert alert-danger">數據格式無效</div>').show();
+        $('#mychart').hide();
+        return;
+      }
+      
+      // 生成顏色
+      let colors = randomColors(values.length);
+      
+      // 圖表數據配置
+      let data = {
+        labels: labels,
+        datasets: [
+          {
+            label: category,
+            data: values,
+            backgroundColor: colors,
+            borderColor: colors,
+            borderWidth: 1
+          }
+        ]
+      };
+      
+      // 圖表選項配置
+      let options = {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          yAxes: [
+            {
+              ticks: {
+                beginAtZero: true
+              }
+            }
+          ]
+        }
+      };
+      
+      // 清除前一個圖表
+      if (window.barchart) {
+        try {
+          window.barchart.destroy();
+          console.log("已清除先前的圖表");
+        } catch (e) {
+          console.warn("清除先前圖表時出錯:", e);
+        }
+      }
+      
+      // 創建新圖表
+      try {
+        console.log("開始創建圖表...");
+        window.barchart = new Chart(canvas, {
+          type: 'bar',
+          data: data,
+          options: options
+        });
+        console.log("圖表創建完成!");
+      } catch (error) {
+        console.error("創建圖表時出錯:", error);
+        $('#chart-loading').html('<div class="alert alert-danger">創建圖表時出錯: ' + error.message + '</div>').show();
+        $('#mychart').hide();
+      }
+    }
+    
+    // 顯示關鍵詞列表
+    function showTopKeys(items) {
+      $('#topkeys').empty();
+      
+      if (!Array.isArray(items) || items.length === 0) {
+        $('#topkeys').html('<li class="text-warning">沒有關鍵詞數據</li>');
+        return;
+      }
+      
+      for (let i = 0; i < items.length; i++) {
+        let item_li = '<li>' + items[i] + '</li>';
+        $('#topkeys').append(item_li);
+      }
+    }
+    
+    // 產生隨機顏色
+    function randomColors(num_colors) {
+      let colors = [];
+      
+      for (let i = 0; i < num_colors; i++) {
+        let r = Math.floor(Math.random() * 255);
+        let g = Math.floor(Math.random() * 255);
+        let b = Math.floor(Math.random() * 255);
+        let rgb = `rgba(${r},${g},${b},0.5)`;
+        
+        colors.push(rgb);
+      }
+      
+      return colors;
+    }
+  </script>
+{% endblock %}

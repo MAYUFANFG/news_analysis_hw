@@ -1,0 +1,347 @@
+{% extends 'base.html' %} 
+{% block title %} 政黨聲量觀測站 {% endblock title %} 
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row mb-4">
+    <div class="col-12 text-center">
+      <h2 class="fw-bold">政黨聲量觀測站</h2>
+      <p class="lead">各政黨網路聲量實時追蹤與分析</p>
+    </div>
+  </div>
+
+  <!-- 第一行：排行榜卡片 -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card shadow-sm border-0 rounded-3">
+        <div class="card-header bg-white py-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-bold">
+              <i class="fas fa-trophy text-warning me-2"></i>政黨聲量排行榜
+            </h5>
+            <span class="badge bg-secondary">資料週期：前4周</span>
+          </div>
+        </div>
+        <div class="card-body pb-2">
+          <div class="row">
+            <div class="col-12 mb-3">
+              <p class="small">
+                <i class="fas fa-info-circle me-1 text-primary"></i>
+                <strong>網路聲量：</strong>新聞報導提及的文章數量，聲量越高表示能見度越高。
+                <strong>感染力：</strong>正面<i class="fas fa-arrow-up text-danger mx-1"></i>、
+                中立<i class="fas fa-minus text-secondary mx-1"></i>、
+                負面<i class="fas fa-arrow-down text-primary mx-1"></i>情緒新聞佔比。
+              </p>
+            </div>
+          </div>
+          <!-- 排行榜內容 -->
+          <div class="row" id="leaderboardDisplay"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 第二行：圖表區域 -->
+  <div class="row">
+    <!-- 第二行左側：長條圖 -->
+    <div class="col-md-6 mb-4">
+      <div class="card shadow-sm border-0 rounded-3 h-100">
+        <div class="card-header bg-white py-3">
+          <h5 class="mb-0 fw-bold">
+            <i class="fas fa-chart-bar text-info me-2"></i>聲量類別分布
+          </h5>
+        </div>
+        <div class="card-body">
+          <p class="small text-muted mb-3">依據新聞類別統計網路聲量，展示各政黨在不同新聞領域的關注度</p>
+          <div style="height: 280px;">
+            <canvas id="pkBarChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 第二行右側：折線圖 -->
+    <div class="col-md-6 mb-4">
+      <div class="card shadow-sm border-0 rounded-3 h-100">
+        <div class="card-header bg-white py-3">
+          <h5 class="mb-0 fw-bold">
+            <i class="fas fa-chart-line text-success me-2"></i>聲量時間趨勢
+          </h5>
+        </div>
+        <div class="card-body">
+          <p class="small text-muted mb-3">依據時間顯示總聲量的變化，揭示各政黨聲量高峰與趨勢</p>
+          <div style="height: 280px;">
+            <canvas id="pkLineChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+<!-- 繪製line chart會用到，必須在chartjs之前先載入 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.13.0/moment.min.js"></script>
+<!-- chartjs圖js-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.min.js"></script>
+
+<script>
+  // 避免重複載入的標誌
+  let isLoading = false;
+  
+  // 頁面載入完成後執行
+  $(document).ready(function() {
+    if (!isLoading) {
+      fetchData();
+    }
+  });
+
+  // 資料獲取函數
+  function fetchData() {
+    isLoading = true;
+    
+    $.ajax({
+      type: "POST",
+      url: "api_get_hot_news_data/",
+      data: {}, 
+      success: function (response) {
+        const list_pkNames = response["list_pkNames"];
+        const list_photos = response["list_photos"];
+        const list_sentiInfo = response["list_sentiInfo"];
+        const list_total_articles = response["list_total_articles"];
+        const list_total_frequency = response["list_total_frequency"];
+        const list_freq_news_category = response["list_freq_news_category"];
+        const list_categories = response["list_category"];
+        const list_freq_daily_line_chart = response["list_freq_daily_line_chart"];
+        const list_colors = response["list_colors"];
+
+        // 渲染各區塊資料
+        renderLeaderboard(list_pkNames, list_photos, list_sentiInfo, list_total_articles, list_total_frequency);
+        renderBarChart(list_pkNames, list_freq_news_category, list_colors, list_categories);
+        renderLineChart(list_pkNames, list_freq_daily_line_chart, list_colors);
+        
+        isLoading = false;
+      },
+      error: function(xhr, status, error) {
+        console.error("API 請求錯誤:", error);
+        isLoading = false;
+      }
+    });
+  }
+
+  // 渲染排行榜
+  function renderLeaderboard(list_pkNames, list_photos, list_sentiInfo, list_total_articles, list_total_frequency) {
+    const leaderboardEl = document.getElementById("leaderboardDisplay");
+    leaderboardEl.innerHTML = "";
+    
+    // 排行榜的列數，根據政黨數量來決定
+    const colSize = Math.min(Math.max(Math.floor(12 / list_pkNames.length), 3), 4);
+    
+    // 情緒標籤顏色
+    const sentimentColors = ["text-danger", "text-secondary", "text-primary"];
+    const sentimentIcons = ["fa-arrow-up", "fa-minus", "fa-arrow-down"];
+    
+    for (let i = 0; i < list_pkNames.length; i++) {
+      // 創建政黨卡片
+      const partyCard = document.createElement("div");
+      partyCard.className = `col-md-${colSize} col-sm-6 mb-3`;
+      
+      // 構建情感分析顯示
+      let sentimentHtml = "";
+      for (let j = 0; j < 3; j++) {
+        sentimentHtml += `
+          <div class="d-inline-block me-2">
+            <i class="fas ${sentimentIcons[j]} ${sentimentColors[j]} me-1"></i>
+            <span class="${sentimentColors[j]}">${list_sentiInfo[i][j]}%</span>
+          </div>
+        `;
+      }
+      
+      // 設置卡片內容
+      partyCard.innerHTML = `
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body text-center p-3">
+            <div class="mb-2">
+              <img src="${list_photos[i]}" alt="${list_pkNames[i]}" class="img-fluid rounded-circle shadow-sm" style="width: 70px; height: 70px; object-fit: cover;">
+            </div>
+            <h5 class="card-title mb-1">${list_pkNames[i]}</h5>
+            <div class="small mb-2">
+              <span class="badge bg-light text-dark">總聲量: ${list_total_articles[i]}篇</span>
+              <span class="badge bg-light text-dark">頻率: ${list_total_frequency[i]}次</span>
+            </div>
+            <div class="small">
+              ${sentimentHtml}
+            </div>
+          </div>
+        </div>
+      `;
+      
+      leaderboardEl.appendChild(partyCard);
+    }
+  }
+
+  // Chart.js 默認設置
+  Chart.defaults.global.defaultFontSize = 10;
+  Chart.defaults.global.defaultFontFamily = "'Noto Sans TC', sans-serif";
+  Chart.defaults.global.animation.duration = 1000;
+
+  // 渲染長條圖
+  function renderBarChart(list_pkNames, list_freq_news_category, list_colors, list_categories) {
+    const chartEl = document.getElementById("pkBarChart");
+    
+    // 檢查是否已存在圖表實例
+    if (window.barChart instanceof Chart) {
+      window.barChart.destroy();
+    }
+    
+    // 準備圖表數據
+    let datasets = [];
+    for (let i = 0; i < list_pkNames.length; i++) {
+      datasets.push({
+        label: list_pkNames[i],
+        backgroundColor: list_colors[i],
+        borderWidth: 1,
+        data: list_freq_news_category[i],
+        maxBarThickness: 50
+      });
+    }
+    
+    // 圖表配置
+    const chartConfig = {
+      type: "bar",
+      data: {
+        labels: list_categories,
+        datasets: datasets
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        legend: {
+          position: 'top',
+          labels: {
+            boxWidth: 10,
+            padding: 10
+          }
+        },
+        scales: {
+          xAxes: [{
+            gridLines: {
+              display: false
+            },
+            ticks: {
+              maxRotation: 45,
+              minRotation: 0
+            }
+          }],
+          yAxes: [{
+            ticks: {
+              beginAtZero: true,
+              maxTicksLimit: 5
+            },
+            gridLines: {
+              color: "rgba(0, 0, 0, 0.05)"
+            }
+          }]
+        },
+        tooltips: {
+          mode: 'index',
+          intersect: false
+        }
+      }
+    };
+    
+    // 創建圖表
+    window.barChart = new Chart(chartEl, chartConfig);
+  }
+
+  // 渲染折線圖
+  function renderLineChart(list_pkNames, list_freq_daily_line_chart, list_colors) {
+    const chartEl = document.getElementById("pkLineChart").getContext("2d");
+    
+    // 檢查是否已存在圖表實例
+    if (window.lineChart instanceof Chart) {
+      window.lineChart.destroy();
+    }
+    
+    // 準備圖表數據
+    let datasets = [];
+    for (let i = 0; i < list_pkNames.length; i++) {
+      datasets.push({
+        label: list_pkNames[i],
+        borderColor: list_colors[i],
+        backgroundColor: 'transparent',
+        pointBackgroundColor: list_colors[i],
+        pointRadius: 3,
+        pointBorderWidth: 1,
+        pointHoverRadius: 5,
+        borderWidth: 2,
+        fill: false,
+        tension: 0.1,
+        data: list_freq_daily_line_chart[i]
+      });
+    }
+    
+    // 圖表配置
+    const chartConfig = {
+      type: "line",
+      data: {
+        datasets: datasets
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        legend: {
+          position: 'top',
+          labels: {
+            boxWidth: 10,
+            padding: 10
+          }
+        },
+        scales: {
+          xAxes: [{
+            type: "time",
+            time: {
+              unit: "day",
+              displayFormats: {
+                day: "MM/DD"
+              },
+              tooltipFormat: 'YYYY-MM-DD'
+            },
+            gridLines: {
+              display: false
+            },
+            ticks: {
+              maxTicksLimit: 8
+            }
+          }],
+          yAxes: [{
+            ticks: {
+              beginAtZero: true,
+              maxTicksLimit: 5
+            },
+            gridLines: {
+              color: "rgba(0, 0, 0, 0.05)"
+            },
+            scaleLabel: {
+              display: true,
+              labelString: "篇數"
+            }
+          }]
+        },
+        tooltips: {
+          mode: 'index',
+          intersect: false
+        },
+        hover: {
+          mode: 'nearest',
+          intersect: true
+        }
+      }
+    };
+    
+    // 創建圖表
+    window.lineChart = new Chart(chartEl, chartConfig);
+  }
+</script>
+{% endblock extra_js %}

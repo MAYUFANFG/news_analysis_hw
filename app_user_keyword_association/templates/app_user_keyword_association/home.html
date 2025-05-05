@@ -1,0 +1,611 @@
+{% extends 'base.html' %} {% block title %}
+全文檢索與你關心的關鍵詞關聯分析 - 公視新聞資料集
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* 全局樣式調整 */
+  .card {
+    box-shadow: 0 2px 4px rgba(0,0,0,.05);
+    border-radius: 8px;
+    border: 1px solid rgba(0,0,0,.08);
+    height: 100%;
+  }
+  
+  .card-header {
+    background-color: rgba(0,0,0,.02);
+    border-bottom: 1px solid rgba(0,0,0,.08);
+    font-weight: 600;
+  }
+  
+  /* 內容溢出處理 */
+  .scrollable-content {
+    max-height: 380px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  
+  .scrollable-content::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .scrollable-content::-webkit-scrollbar-thumb {
+    background-color: rgba(0,0,0,.2);
+    border-radius: 3px;
+  }
+  
+  /* 響應式調整 */
+  @media (max-width: 992px) {
+    .content-container {
+      gap: 0.75rem !important;
+    }
+    .card-body {
+      padding: 0.75rem;
+    }
+  }
+  
+  /* 與側邊欄的間距調整 */
+  #mainContent {
+    padding-left: 15px !important;
+    transition: margin-left 0.3s ease;
+  }
+  
+  /* 內容區域寬度調整，根據側邊欄狀態變化 */
+  .main-content-wrapper {
+    transition: all 0.3s;
+    max-width: 100%;
+    width: calc(100% - 15px) !important;
+  }
+  
+  /* 適應側邊欄狀態的內容區域樣式 */
+  .sidebar-collapsed + #mainContent,
+  .sidebar-expanded + #mainContent {
+    transition: all 0.3s;
+  }
+  
+  /* 確保responsive布局 */
+  @media (max-width: 768px) {
+    #mainContent {
+      margin-left: 0 !important;
+    }
+    
+    .main-content-wrapper {
+      width: 100% !important;
+    }
+  }
+  
+  /* 自定義配色 */
+  .text-primary-dark {
+    color: #0056b3;
+  }
+  
+  .badge-light-custom {
+    background-color: #f8f9fa;
+    color: #495057;
+    border: 1px solid #e9ecef;
+  }
+  
+  /* 按鈕樣式 */
+  .btn-search {
+    background-color: #0d6efd;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 0.375rem 1rem;
+    transition: all 0.2s;
+  }
+  
+  .btn-search:hover {
+    background-color: #0b5ed7;
+    transform: translateY(-1px);
+  }
+  
+  /* 標題樣式 */
+  .page-title {
+    color: #212529;
+    border-left: 4px solid #0d6efd;
+    padding-left: 10px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- 安全檢查：確保內容不被側邊欄覆蓋 -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.getElementById('mainContent');
+    
+    function updateMargin() {
+      if (sidebar && mainContent) {
+        // 檢查側邊欄的狀態，根據不同狀態設置不同的margin
+        if (sidebar.classList.contains('sidebar-collapsed')) {
+          // 當側邊欄收起時
+          mainContent.style.marginLeft = '60px';
+        } else {
+          // 當側邊欄展開時
+          mainContent.style.marginLeft = '250px';
+        }
+      }
+    }
+    
+    // 初始調整
+    updateMargin();
+    
+    // 在窗口調整大小時重新計算
+    window.addEventListener('resize', updateMargin);
+    
+    // 監聽側邊欄的類別變化
+    const observer = new MutationObserver(updateMargin);
+    if (sidebar) {
+      observer.observe(sidebar, { 
+        attributes: true,
+        attributeFilter: ['class'] // 只監聽class屬性的變化
+      });
+    }
+  });
+</script>
+
+<div class="mb-3 pl-2">
+  <h2 class="page-title mb-2">全文檢索與關鍵詞關聯分析</h2>
+  <p class="text-muted">
+    對你想要了解的議題進行全文檢索，找出有哪些詞與你的關鍵詞一起出現
+  </p>
+</div>
+
+<!-- 主要內容區 -->
+<div class="content-container d-flex flex-column gap-3 main-content-wrapper ps-2">
+  <!-- 第一行：查詢條件和詞雲 -->
+  <div class="row g-3 mx-0">
+    <!-- 查詢條件 -->
+    <div class="col-md-4 col-lg-3">
+      <div class="card">
+        <div class="card-header py-2">
+          <i class="fas fa-search me-1"></i> 查詢條件
+        </div>
+        <div class="card-body">
+          <div class="mb-2">
+            <label class="form-label fw-medium">關鍵詞</label>
+            <input
+              id="input_keyword"
+              name="userkey"
+              value="台灣 美國"
+              class="form-control form-control-sm"
+              placeholder="請輸入關鍵詞"
+            />
+            <div class="form-text small">
+              全文搜尋，可輸入多個關鍵詞，以空白隔開
+            </div>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label fw-medium">條件</label>
+            <div>
+              <div class="form-check form-check-inline">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  value="and"
+                  name="condradio"
+                  id="condradio1"
+                  checked
+                />
+                <label class="form-check-label" for="condradio1">and</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  value="or"
+                  name="condradio"
+                  id="condradio2"
+                />
+                <label class="form-check-label" for="condradio2">or</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label fw-medium">新聞類別</label>
+            <div>
+              <div class="form-check form-check-inline">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  value="全部"
+                  name="cateradio"
+                  id="cateradio1"
+                  checked
+                />
+                <label class="form-check-label" for="cateradio1">全部</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  value="政治"
+                  name="cateradio"
+                  id="cateradio2"
+                />
+                <label class="form-check-label" for="cateradio2">政治</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  value="政經"
+                  name="cateradio"
+                  id="cateradio3"
+                />
+                <label class="form-check-label" for="cateradio3">政經</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  value="全球"
+                  name="cateradio"
+                  id="cateradio4"
+                />
+                <label class="form-check-label" for="cateradio4">全球</label>
+              </div>
+            </div>
+          </div>
+          <div class="mb-2">
+            <label class="form-label fw-medium">最近周數</label>
+            <div>
+              <div class="form-check form-check-inline">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  value="1"
+                  name="wkradio"
+                  id="wkradio1"
+                />
+                <label class="form-check-label" for="wkradio1">1</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  value="2"
+                  name="wkradio"
+                  id="wkradio2"
+                  checked
+                />
+                <label class="form-check-label" for="wkradio2">2</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  value="3"
+                  name="wkradio"
+                  id="wkradio3"
+                />
+                <label class="form-check-label" for="wkradio3">3</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  value="4"
+                  name="wkradio"
+                  id="wkradio4"
+                />
+                <label class="form-check-label" for="wkradio4">4</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  value="6"
+                  name="wkradio"
+                  id="wkradio6"
+                />
+                <label class="form-check-label" for="wkradio6">6</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  value="8"
+                  name="wkradio"
+                  id="wkradio8"
+                />
+                <label class="form-check-label" for="wkradio8">8</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  value="12"
+                  name="wkradio"
+                  id="wkradio12"
+                />
+                <label class="form-check-label" for="wkradio12">12</label>
+              </div>
+            </div>
+          </div>
+          <div class="d-grid mt-3">
+            <button type="button" id="btn_ok" class="btn btn-search btn-sm">
+              <i class="fas fa-search me-1"></i> 查詢
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 詞雲區域 -->
+    <div class="col-md-8 col-lg-9">
+      <div class="card" style="width: 100%; max-width: 100%;">
+        <div class="card-header py-2">
+          <i class="fas fa-cloud me-1"></i> 關鍵詞關聯詞雲
+        </div>
+        <div class="card-body d-flex justify-content-center align-items-center p-2" style="overflow: hidden;">
+          <div id="cloud" style="width: 100%; height: 330px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 第二行：新聞列表和關鍵字段落 -->
+  <div class="row g-3 mx-0">
+    <!-- 新聞列表 -->
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header py-2 d-flex justify-content-between align-items-center">
+          <div>
+            <i class="fas fa-newspaper me-1"></i> 相關新聞
+          </div>
+          <div id="num_articles" class="badge bg-primary rounded-pill">0</div>
+        </div>
+        <div class="card-body p-0">
+          <ul class="list-group list-group-flush scrollable-content" id="newslinks"></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 關鍵字段落 -->
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header py-2">
+          <i class="fas fa-quote-left me-1"></i> 關鍵字所在段落
+        </div>
+        <div class="card-body p-0">
+          <ul class="list-group list-group-flush scrollable-content" id="same_paragraph"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- chartjs-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.min.js"></script>
+
+<!-- cloud chart -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.4.11/d3.min.js"></script>
+<script src="https://cdn.rawgit.com/jasondavies/d3-cloud/v1.2.1/build/d3.layout.cloud.js"></script>
+
+<!-- Here are your codes -->
+<script>
+  // Show the page with default setting when page is initialized.
+  call_ajax();
+
+  // btn submit
+  $("#btn_ok").on("click", function () {
+    call_ajax();
+  }); //event function
+
+  // category radio button
+  $("input[name='cateradio']").on("change", function () {
+    call_ajax();
+  }); //event function
+
+  // weeks radio button
+  $("input[name='wkradio']").on("change", function () {
+    call_ajax();
+  }); //event function
+
+  // condition radio button
+  $("input[name='condradio']").on("change", function () {
+    call_ajax();
+  }); //event function
+
+  function call_ajax() {
+    const userkey = $("#input_keyword").val();
+    const weeks = $("input[name='wkradio']:checked").val();
+    const cate = $("input[name='cateradio']:checked").val();
+    const cond = $("input[name='condradio']:checked").val();
+
+    if (userkey.length < 2) {
+      alert("輸入關鍵字不可空白或小於兩個中文字!");
+      return 0;
+    }
+    
+    // 顯示載入指示器
+    $("#cloud").html('<div class="d-flex justify-content-center align-items-center h-100"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>');
+    $("#newslinks").html('<li class="list-group-item text-center"><div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>載入中...</li>');
+    $("#same_paragraph").html('<li class="list-group-item text-center"><div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>載入中...</li>');
+    
+    $.ajax({
+      type: "POST",
+      url: "api_get_userkey_associate/",
+      data: {
+        userkey: userkey,
+        cate: cate,
+        weeks: weeks,
+        cond: cond,
+      }, // pass to server
+      success: function (received) {
+        // display number of articles or stories
+        // 如果返回的數據中沒有 num_articles，則使用 newslinks 的長度
+        const num_articles = received["num_articles"] || received["newslinks"].length;
+        $("#num_articles").text(num_articles);
+        
+        // show news title and link
+        const newslinks = received["newslinks"];
+        $("#newslinks").empty();
+        if (newslinks.length == 0) {
+          $("#newslinks").append("<li class='list-group-item text-center text-muted'>沒有找到相關新聞</li>");
+        }
+        // show news title and link
+        for (let i = 0; i < newslinks.length; i++) {
+          let photoHtml = '';
+          if (newslinks[i].photo_link && newslinks[i].photo_link.trim() !== '') {
+            photoHtml = '<div class="mt-2"><img src="' + newslinks[i].photo_link + '" class="img-fluid rounded" style="max-height: 80px;" alt="新聞圖片"></div>';
+          }
+          
+          const items =
+            '<li class="list-group-item py-2">' +
+            '<div>' +
+            '<span class="badge bg-secondary me-2">' + newslinks[i].category + '</span>' +
+            '<a href="' + newslinks[i].link + '" class="text-decoration-none fw-medium" target="_blank">' +
+            newslinks[i].title +
+            '</a>' +
+            '</div>' +
+            photoHtml +
+            '</li>';
+          $("#newslinks").append(items);
+        }
+
+        // 保存相關關鍵詞
+        const related_words = received["related_words"];
+        $("#related_words").empty();
+        // 雖然不顯示相關關鍵詞區塊，但仍需處理數據以供其他功能使用
+
+        // show paragraphs containing the user keywords
+        const same_paragraph = received["same_paragraph"];
+        $("#same_paragraph").empty();
+        if (same_paragraph.length == 0) {
+          $("#same_paragraph").append("<li class='list-group-item text-center text-muted'>沒有找到包含關鍵詞的段落</li>");
+        }
+        for (let i = 0; i < same_paragraph.length; i++) {
+          // 尋找關鍵詞並高亮顯示
+          let highlightedText = same_paragraph[i];
+          const keywords = userkey.split(" ");
+          
+          // 為關鍵詞添加高亮
+          keywords.forEach(keyword => {
+            if (keyword.trim().length > 0) {
+              const regExp = new RegExp(keyword, 'gi');
+              highlightedText = highlightedText.replace(regExp, match => 
+                `<span class="bg-warning bg-opacity-50">${match}</span>`
+              );
+            }
+          });
+          
+          const msg = "<li class='list-group-item py-2'>" + highlightedText + "</li>";
+          $("#same_paragraph").append(msg);
+        }
+
+        // draw word cloud for related words
+        const clouddata = received["clouddata"];
+        $("#cloud").empty();
+        if (clouddata && clouddata.length > 0) {
+          drawCloud(clouddata, "#cloud");
+        } else {
+          $("#cloud").html("<div class='d-flex justify-content-center align-items-center h-100'><p class='text-muted'>沒有足夠的數據生成詞雲</p></div>");
+        }
+      }, //success function
+
+      error: function (msg, status) {
+        console.log(msg);
+        console.log(status);
+        $("#cloud").html("<div class='d-flex justify-content-center align-items-center h-100'><p class='text-danger'>載入失敗</p></div>");
+        $("#newslinks").html("<li class='list-group-item text-center text-danger'>載入失敗</li>");
+        $("#same_paragraph").html("<li class='list-group-item text-center text-danger'>載入失敗</li>");
+        alert("發生錯誤，請檢查控制台獲取詳細信息。");
+      }, //print status and msg when ajax goes wrong
+    }); //ajax
+  } //function call_ajax()
+
+
+  function drawCloud(topWordToDraw, element_id) {
+    // 調整詞雲大小以適應容器
+    const container = document.querySelector(element_id);
+    const width = container.clientWidth || 380;
+    const height = container.clientHeight || 300;
+    
+    // 保存詞雲數據供窗口調整時使用
+    window.cloudData = topWordToDraw;
+
+    // 檢查是否存在有效的詞雲數據
+    if (!topWordToDraw || topWordToDraw.length === 0) {
+      d3.select(element_id).append("p")
+        .attr("class", "text-center text-muted")
+        .text("沒有足夠的數據生成詞雲");
+      return;
+    }
+
+    try {
+      // 清空容器
+      d3.select(element_id).html("");
+      
+      // 顏色方案
+      const colorScheme = ["#4e79a7", "#f28e2c", "#e15759", "#76b7b2", "#59a14f", 
+                         "#edc949", "#af7aa1", "#ff9da7", "#9c755f", "#bab0ab"];
+      
+      // 構建詞雲
+      d3.layout
+        .cloud()
+        .size([width, height])
+        .words(topWordToDraw)
+        .padding(3)
+        .rotate(function() { 
+          // 所有詞都保持水平
+          return 0;
+        })
+        .font("Arial")
+        .fontSize(function (d) {
+          return d.size;
+        })
+        .on("end", draw)
+        .start();
+
+      // 繪製詞雲
+      function draw(words) {
+        d3.select(element_id)
+          .append("svg")
+          .attr("width", width)
+          .attr("height", height)
+          .attr("class", "mx-auto d-block")
+          .append("g")
+          .attr(
+            "transform",
+            "translate(" + width / 2 + "," + height / 2 + ")"
+          )
+          .selectAll("text")
+          .data(words)
+          .enter()
+          .append("text")
+          .style("font-size", d => d.size + "px")
+          .style("font-family", "Arial, sans-serif")
+          .style("font-weight", d => d.size > 25 ? "bold" : "normal")
+          .style("fill", (d, i) => colorScheme[i % colorScheme.length])
+          .style("cursor", "pointer")
+          .attr("text-anchor", "middle")
+          .attr("transform", d => "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")")
+          .text(d => d.text)
+          .on("mouseover", function() {
+            d3.select(this)
+              .transition()
+              .duration(200)
+              .style("font-size", d => (d.size + 2) + "px");
+          })
+          .on("mouseout", function() {
+            d3.select(this)
+              .transition()
+              .duration(200)
+              .style("font-size", d => d.size + "px");
+          });
+      }
+    } catch (error) {
+      console.error("詞雲生成錯誤:", error);
+      d3.select(element_id).html("<div class='d-flex justify-content-center align-items-center h-100'><p class='text-danger'>生成詞雲時發生錯誤</p></div>");
+    }
+  } //drawCloud()
+</script>
+{% endblock %}

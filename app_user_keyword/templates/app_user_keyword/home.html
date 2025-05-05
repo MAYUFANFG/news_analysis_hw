@@ -1,0 +1,374 @@
+{% extends 'base.html' %} {% block title %}
+  公視新聞關鍵詞分析
+{% endblock %} {% block content %}
+  <div class="container-fluid px-1">
+    <div class="row mb-2">
+      <div class="col-12">
+        <h3 class="h5">分析關鍵詞</h3>
+        <p class="small text-muted mb-1">針對輸入的關鍵詞進行熱門程度分析</p>
+      </div>
+    </div>
+    
+    <div class="row g-2">
+      <!-- 左側：輸入條件區塊和熱門程度 -->
+      <div class="col-lg-5 col-md-12">
+        <!-- 輸入條件區塊 -->
+        <div class="card mb-2 shadow-sm">
+          <div class="card-header py-1 bg-light">
+            <h6 class="mb-0 small text-uppercase">輸入條件</h6>
+          </div>
+          <div class="card-body py-1 px-2">
+            <div class="mb-2 row">
+              <label class="col-sm-3 col-form-label col-form-label-sm">關鍵詞</label>
+              <div class="col-sm-9">
+                <input id="input_keyword" name="userkey" value="川普 台灣" class="form-control form-control-sm" />
+                <div class="form-text text-muted small">可輸入多個關鍵詞，以空格分隔</div>
+              </div>
+            </div>
+
+            <div class="mb-2 row">
+              <label class="col-sm-3 col-form-label col-form-label-sm">條件</label>
+              <div class="col-sm-9 pt-1">
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" id="cond_and" value="and" name="condradio" />
+                  <label class="form-check-label small" for="cond_and">AND</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" id="cond_or" value="or" name="condradio" checked />
+                  <label class="form-check-label small" for="cond_or">OR</label>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-2 row">
+              <label class="col-sm-3 col-form-label col-form-label-sm">類別</label>
+              <div class="col-sm-9 pt-1">
+                <div class="d-flex flex-wrap">
+                  <div class="form-check me-2">
+                    <input class="form-check-input" type="radio" id="cate_all" value="全部" name="cateradio" checked />
+                    <label class="form-check-label small" for="cate_all">全部</label>
+                  </div>
+                  <div class="form-check me-2">
+                    <input class="form-check-input" type="radio" id="cate_politics" value="政治" name="cateradio" />
+                    <label class="form-check-label small" for="cate_politics">政治</label>
+                  </div>
+                  <div class="form-check me-2">
+                    <input class="form-check-input" type="radio" id="cate_economy" value="政經" name="cateradio" />
+                    <label class="form-check-label small" for="cate_economy">政經</label>
+                  </div>
+                  <div class="form-check me-2">
+                    <input class="form-check-input" type="radio" id="cate_global" value="全球" name="cateradio" />
+                    <label class="form-check-label small" for="cate_global">全球</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mb-2 row">
+              <label class="col-sm-3 col-form-label col-form-label-sm">時間範圍</label>
+              <div class="col-sm-9 pt-1">
+                <div class="d-flex flex-wrap">
+                  <div class="form-check me-2">
+                    <input class="form-check-input" type="radio" id="wk1" value="1" name="wkradio" />
+                    <label class="form-check-label small" for="wk1">1週</label>
+                  </div>
+                  <div class="form-check me-2">
+                    <input class="form-check-input" type="radio" id="wk2" value="2" name="wkradio" checked />
+                    <label class="form-check-label small" for="wk2">2週</label>
+                  </div>
+                  <div class="form-check me-2">
+                    <input class="form-check-input" type="radio" id="wk3" value="3" name="wkradio" />
+                    <label class="form-check-label small" for="wk3">3週</label>
+                  </div>
+                  <div class="form-check me-2">
+                    <input class="form-check-input" type="radio" id="wk4" value="4" name="wkradio" />
+                    <label class="form-check-label small" for="wk4">4週</label>
+                  </div>
+                  <div class="form-check me-2">
+                    <input class="form-check-input" type="radio" id="wk6" value="6" name="wkradio" />
+                    <label class="form-check-label small" for="wk6">6週</label>
+                  </div>
+                  <div class="form-check me-2">
+                    <input class="form-check-input" type="radio" id="wk8" value="8" name="wkradio" />
+                    <label class="form-check-label small" for="wk8">8週</label>
+                  </div>
+                  <div class="form-check me-2">
+                    <input class="form-check-input" type="radio" id="wk12" value="12" name="wkradio" />
+                    <label class="form-check-label small" for="wk12">12週</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="row">
+              <div class="col-sm-9 offset-sm-3">
+                <button type="button" id="btn_ok" class="btn btn-primary btn-sm py-0">查詢</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 熱門程度區塊 -->
+        <div class="card shadow-sm">
+          <div class="card-header py-1 bg-light">
+            <h6 class="mb-0 small text-uppercase">熱門程度:有幾篇新聞報導提到它?</h6>
+          </div>
+          <div class="card-body py-1 px-2">
+            <ul id="keyword_article_count" class="list-group list-group-flush small">
+              <!-- 此處由JS動態填充 -->
+            </ul>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 右側：時間趨勢圖 -->
+      <div class="col-lg-5 col-md-12 mx-lg-0 ms-lg-0">
+        <div class="card shadow-sm" style="max-width: 550px;">
+          <div class="card-header py-1 bg-light">
+            <h6 class="mb-0 small text-uppercase">出現頻率以時間呈現</h6>
+          </div>
+          <div class="card-body p-1">
+            <div id="chart-container" style="height: 250px;">
+              <canvas id="keyword_time_line_chart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %} {% block extra_js %}
+  <!-- 載入必要的 JavaScript 庫 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <!-- 加載日期適配器 -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.1/dist/chartjs-adapter-moment.min.js"></script>
+  
+  <!-- 程式碼區 -->
+  <script>
+    // 初始化全域變數
+    let line_chart = null;
+    
+    // 頁面載入完成後執行初始查詢
+    $(document).ready(function() {
+      // 執行第一次查詢
+      call_ajax();
+      
+      // 註冊事件處理函數
+      $('#btn_ok').on('click', function() {
+        call_ajax();
+      });
+      
+      $("input[name='cateradio']").on('change', function() {
+        call_ajax();
+      });
+      
+      $("input[name='wkradio']").on('change', function() {
+        call_ajax();
+      });
+      
+      $("input[name='condradio']").on('change', function() {
+        call_ajax();
+      });
+      
+      // 監聽視窗大小調整，重新繪製圖表
+      $(window).on('resize', function() {
+        if (line_chart) {
+          line_chart.resize();
+        }
+      });
+      
+      // 監聽側邊欄狀態變化，重新繪製圖表
+      $('#sidebarToggle').on('click', function() {
+        setTimeout(function() {
+          if (line_chart) {
+            line_chart.resize();
+          }
+        }, 300); // 等待側邊欄動畫完成
+      });
+    });
+    
+    // 向後端發送 AJAX 請求
+    function call_ajax() {
+      const userkey = $('#input_keyword').val();
+      const weeks = $("input[name='wkradio']:checked").val();
+      const cate = $("input[name='cateradio']:checked").val();
+      const cond = $("input[name='condradio']:checked").val();
+    
+      if (userkey.length < 2) {
+        alert('輸入關鍵字不可空白或小於兩個字!');
+        return;
+      }
+      
+      // 顯示載入中狀態
+      $('#keyword_article_count').html('<div class="text-center py-2"><div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">載入中...</span></div></div>');
+      
+      // 圖表區域也顯示載入中
+      $('#chart-container').html('<div class="d-flex justify-content-center align-items-center h-100"><div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">載入中...</span></div></div>');
+    
+      $.ajax({
+        type: 'POST',
+        url: 'api_get_top_userkey/',
+        data: {
+          userkey: userkey,
+          cate: cate,
+          weeks: weeks,
+          cond: cond
+        },
+        success: function(received) {
+          // 處理文章計數資料
+          const article_count = received['key_occurrence_cat'];
+          console.log('文章計數:', article_count);
+          $('#keyword_article_count').empty();
+          
+          // 計算總文章數
+          const totalArticles = article_count['全部'] || 0;
+          
+          // 將內容加上清單項目顯示
+          for (let key in article_count) {
+            let percentage = totalArticles > 0 ? Math.round((article_count[key] / totalArticles) * 100) : 0;
+            let paste = `
+              <li class="list-group-item py-0 d-flex justify-content-between align-items-center">
+                ${key}
+                <span class="badge bg-primary rounded-pill">${article_count[key]} (${percentage}%)</span>
+              </li>
+            `;
+            $('#keyword_article_count').append(paste);
+          }
+          
+          // 處理時間頻率資料並生成圖表
+          const data_key_time_freq = received['key_time_freq'];
+          console.log('時間頻率資料:', data_key_time_freq);
+          
+          // 確保圖表容器已準備好
+          $('#chart-container').html('<canvas id="keyword_time_line_chart"></canvas>');
+          
+          // 重新格式化時間數據以確保兼容性
+          const formattedData = data_key_time_freq.map(item => {
+            return {
+              x: moment(item.x).valueOf(), // 轉換為時間戳記
+              y: item.y
+            };
+          });
+          
+          showtimechart(formattedData);
+        },
+        error: function(error) {
+          console.error('AJAX請求失敗:', error);
+          alert('資料載入失敗，請稍後再試。');
+          $('#keyword_article_count').html('<p class="text-danger text-center small py-1">資料載入失敗</p>');
+          $('#chart-container').html('<p class="text-danger text-center small py-2">資料載入失敗</p>');
+        }
+      });
+    }
+    
+    // 繪製時間趨勢圖表
+    function showtimechart(data_key_time_freq) {
+      // 確保完全清除舊圖表
+      if (line_chart) {
+        line_chart.destroy();
+        line_chart = null;
+      }
+      
+      // 取得繪圖元件
+      const ctx_key_time = document.getElementById('keyword_time_line_chart').getContext('2d');
+      
+      // 設定圖表選項 - 使用簡化的時間軸設定
+      const myoptions = {
+        type: 'line',
+        data: {
+          datasets: [
+            {
+              label: '新聞數量',
+              borderColor: '#375a7f',
+              backgroundColor: 'rgba(55, 90, 127, 0.2)',
+              pointBackgroundColor: '#375a7f',
+              pointBorderColor: '#fff',
+              pointRadius: 2,
+              pointHoverRadius: 3,
+              borderWidth: 1.5,
+              data: data_key_time_freq,
+              fill: true
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          layout: {
+            padding: {
+              left: 5,
+              right: 5,
+              top: 5,
+              bottom: 5
+            }
+          },
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              titleFont: {
+                size: 10
+              },
+              bodyFont: {
+                size: 10
+              },
+              callbacks: {
+                title: function(tooltipItems) {
+                  return moment(tooltipItems[0].parsed.x).format('YYYY-MM-DD');
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: 'time',
+              time: {
+                unit: 'day',
+                tooltipFormat: 'YYYY-MM-DD',
+                displayFormats: {
+                  day: 'MM/DD'
+                }
+              },
+              grid: {
+                display: false
+              },
+              title: {
+                display: false
+              },
+              ticks: {
+                font: {
+                  size: 8
+                },
+                maxRotation: 0,
+                autoSkip: true,
+                maxTicksLimit: 7
+              }
+            },
+            y: {
+              beginAtZero: true,
+              title: {
+                display: false
+              },
+              grid: {
+                color: 'rgba(0,0,0,0.05)'
+              },
+              ticks: {
+                precision: 0,
+                font: {
+                  size: 8
+                },
+                maxTicksLimit: 5
+              }
+            }
+          }
+        }
+      };
+    
+      // 畫新圖
+      line_chart = new Chart(ctx_key_time, myoptions);
+    }
+  </script>
+{% endblock %}

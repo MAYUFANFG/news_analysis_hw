@@ -1,0 +1,364 @@
+{% extends 'base.html' %} 
+{% block title %} 川普聲量觀察 {% endblock %} 
+
+{% block extra_css %}
+<style>
+  /* 優化主內容區域的寬度和彈性 */
+  #mainContent {
+    width: calc(100% - 250px);
+    max-width: 100%;
+    padding: 1.5rem;
+    transition: all 0.3s;
+  }
+  
+  /* 側邊欄收起時的內容區調整 */
+  .sidebar-collapsed + #mainContent {
+    width: calc(100% - 60px);
+  }
+  
+  /* 響應式調整 */
+  @media (max-width: 992px) {
+    #mainContent {
+      width: calc(100% - 60px);
+      padding: 1rem;
+    }
+    
+    /* 讓卡片可以自動調整高度 */
+    .card {
+      height: auto !important;
+    }
+  }
+  
+  /* 優化圖表容器 */
+  #bar_chart, #line_chart {
+    max-width: 100%;
+  }
+  
+  /* 控制照片大小和布局 */
+  .trump-photo-container {
+    max-width: 180px;
+    margin: 0 auto;
+  }
+  
+  /* 根據不同螢幕尺寸調整圖片大小 */
+  @media (max-width: 768px) {
+    .trump-photo-container {
+      max-width: 150px;
+    }
+  }
+  
+  @media (max-width: 576px) {
+    .trump-photo-container {
+      max-width: 120px;
+    }
+  }
+  
+  /* 優化卡片內容間距 */
+  .card-body {
+    padding: 1.25rem;
+  }
+  
+  /* 卡片標題樣式優化 */
+  .card-title {
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  /* 確保圖表容器正確響應 */
+  .chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+  <div class="row mb-3">
+    <div class="col-12">
+      <h2 class="fw-bold">川普聲量觀察</h2>
+      <p class="text-muted">針對特朗普在新聞媒體中的提及頻率和曝光度的深入分析</p>
+    </div>
+  </div>
+
+  <!-- 網路聲量區塊 - 使用單行佈局 -->
+  <div class="row mb-3">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header bg-light py-2">
+          <h6 class="mb-0 text-uppercase fw-bold">資料週期: 資料截止時間的前4周</h6>
+        </div>
+        <div class="card-body">
+          <h4 class="card-title">網路聲量</h4>
+          <div class="mb-3">
+            <p class="card-text">
+              <strong>網路聲量是什麼？</strong>
+              新聞報導中提及這組關鍵字的頻率，聲量越高表示能見度越高。
+            </p>
+            <p class="card-text small">
+              <strong>總篇數:</strong> 有多少篇新聞提到
+              <strong class="ms-3">總次數:</strong> 在相關新聞中被提到多少次
+            </p>
+          </div>
+          <hr>
+          <div id="share_of_voice"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 統計圖表區塊 - 使用響應式佈局 -->
+  <div class="row g-3">
+    <!-- 聲量分布區塊 -->
+    <div class="col-12 col-lg-6 mb-3">
+      <div class="card shadow-sm">
+        <div class="card-header bg-light py-2">
+          <h6 class="mb-0 text-uppercase fw-bold">聲量分布情況</h6>
+        </div>
+        <div class="card-body">
+          <h4 class="card-title">依據新聞類別統計網路聲量</h4>
+          <p class="card-text">在哪一類別的新聞中被報導最多篇?</p>
+          <hr>
+          <div class="chart-container">
+            <canvas id="bar_chart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 聲量變化區塊 -->
+    <div class="col-12 col-lg-6 mb-3">
+      <div class="card shadow-sm">
+        <div class="card-header bg-light py-2">
+          <h6 class="mb-0 text-uppercase fw-bold">聲量變化</h6>
+        </div>
+        <div class="card-body">
+          <h4 class="card-title">依據時間顯示聲量的變化</h4>
+          <p class="card-text">在哪個時間點被新聞報導最多?</p>
+          <hr>
+          <div class="chart-container">
+            <canvas id="line_chart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} 
+
+{% block extra_js %}
+<!-- 必要的JavaScript庫 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js"></script>
+
+<script>
+  // 從Django後端接收的數據
+  const freqByDate = {{ freqByDate|safe }};
+  const freqByCate = {{ freqByCate|safe }};
+  const news_category = {{ category|safe }};
+  const num_occurrence = {{ num_occurrence|safe }};
+  const num_frequency = {{ num_frequency|safe }};
+  const photo = "https://upload.wikimedia.org/wikipedia/commons/5/56/Donald_Trump_official_portrait.jpg";
+
+  // 初始化所有圖表和數據顯示
+  document.addEventListener('DOMContentLoaded', function() {
+    displayShareOfVoice();
+    drawBarChart();
+    showLineChart();
+    
+    // 檢測頁面寬度並動態調整
+    function adjustLayout() {
+      const mainContent = document.getElementById('mainContent');
+      const sidebar = document.getElementById('sidebar');
+      const windowWidth = window.innerWidth;
+      
+      // 在小屏幕上自動收起側邊欄
+      if (windowWidth < 992 && sidebar.classList.contains('sidebar-expanded')) {
+        // 模擬點擊側邊欄切換按鈕
+        document.getElementById('sidebarToggle').click();
+      }
+    }
+    
+    // 頁面加載時執行
+    adjustLayout();
+    
+    // 窗口調整大小時重新繪製圖表以避免變形
+    window.addEventListener('resize', function() {
+      adjustLayout();
+      if (window.time_line_chart) {
+        window.time_line_chart.resize();
+      }
+      // 重繪柱狀圖
+      if (window.bar_chart) {
+        window.bar_chart.resize();
+      }
+    });
+  });
+
+  // 顯示網路聲量資訊 - 優化響應式設計及圖片大小
+  function displayShareOfVoice() {
+    const voiceDiv = document.getElementById("share_of_voice");
+    
+    const html_snippet = `
+      <div class="row g-3 align-items-center">
+        <div class="col-md-5 col-lg-4 text-center">
+          <div class="trump-photo-container">
+            <img class="img-fluid rounded w-100" 
+                 src="${photo}" alt="特朗普照片">
+          </div>
+        </div>
+        <div class="col-md-7 col-lg-8">
+          <div class="bg-light p-3 rounded h-100">
+            <div class="mb-3">
+              <h5 class="text-primary mb-1">總篇數</h5>
+              <h3 class="mb-0">${num_occurrence} <small class="text-muted">篇</small></h3>
+            </div>
+            <hr>
+            <div>
+              <h5 class="text-primary mb-1">總次數</h5>
+              <h3 class="mb-0">${num_frequency} <small class="text-muted">次</small></h3>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+    voiceDiv.innerHTML = html_snippet;
+  }
+
+  // 繪製新聞類別長條圖 - 優化響應式
+  function drawBarChart() {
+    const ctx = document.getElementById("bar_chart").getContext('2d');
+    
+    // 確保標籤長度不會導致水平滾動
+    const processedLabels = news_category.map(label => {
+      return label.length > 6 ? label.substr(0, 6) + '...' : label;
+    });
+    
+    const data = {
+      labels: processedLabels,
+      datasets: [{
+        label: '川普聲量',
+        data: freqByCate,
+        backgroundColor: '#0d6efd80',
+        borderColor: '#0d6efd',
+        borderWidth: 1
+      }]
+    };
+    
+    const options = {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        yAxes: [{
+          ticks: {
+            beginAtZero: true
+          },
+          gridLines: {
+            color: 'rgba(0, 0, 0, 0.05)'
+          }
+        }],
+        xAxes: [{
+          ticks: {
+            autoSkip: true,
+            maxRotation: 45,
+            minRotation: 45
+          },
+          gridLines: {
+            display: false
+          }
+        }]
+      },
+      legend: {
+        display: false
+      },
+      tooltips: {
+        callbacks: {
+          title: function(tooltipItem, data) {
+            // 顯示完整標籤
+            const index = tooltipItem[0].index;
+            return news_category[index];
+          }
+        }
+      }
+    };
+
+    window.bar_chart = new Chart(ctx, {
+      type: 'bar',
+      data: data,
+      options: options
+    });
+  }
+
+  // 繪製時間線圖表 - 優化響應式
+  function showLineChart() {
+    const ctx = document.getElementById("line_chart").getContext('2d');
+    
+    if (window.time_line_chart) {
+      time_line_chart.destroy();
+    }
+    
+    const options = {
+      type: 'line',
+      data: {
+        datasets: [{
+          label: '川普聲量趨勢',
+          borderColor: '#0d6efd',
+          backgroundColor: 'rgba(13, 110, 253, 0.1)',
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: '#0d6efd',
+          pointBorderColor: '#fff',
+          data: freqByDate,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          xAxes: [{
+            type: 'time',
+            time: {
+              unit: 'day',
+              displayFormats: {
+                day: 'MM/DD'
+              },
+              tooltipFormat: 'YYYY-MM-DD'
+            },
+            gridLines: {
+              display: false
+            },
+            ticks: {
+              maxTicksLimit: 8, // 限制x軸顯示的刻度數量，避免擁擠
+              maxRotation: 0,  // 避免標籤旋轉
+              autoSkip: true   // 自動跳過部分標籤
+            }
+          }],
+          yAxes: [{
+            ticks: {
+              beginAtZero: true
+            },
+            gridLines: {
+              color: 'rgba(0, 0, 0, 0.05)'
+            },
+            scaleLabel: {
+              display: true,
+              labelString: '出現次數'
+            }
+          }]
+        },
+        tooltips: {
+          callbacks: {
+            title: function(tooltipItem) {
+              return moment(tooltipItem[0].xLabel).format('YYYY-MM-DD');
+            }
+          }
+        }
+      }
+    };
+    
+    window.time_line_chart = new Chart(ctx, options);
+  }
+</script>
+{% endblock %}

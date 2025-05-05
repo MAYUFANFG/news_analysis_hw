@@ -1,0 +1,272 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}輿情分析平台{% endblock %}</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+      /* Custom styles */
+      body {
+        background-color: #f8f9fa;
+        padding-top: 56px; /* 為固定導航欄提供空間 */
+      }
+      
+      #sidebar {
+        height: calc(100vh - 56px);
+        position: fixed;
+        top: 56px;
+        left: 0;
+        transition: all 0.3s;
+        z-index: 1000;
+        overflow-y: auto;
+      }
+      
+      #mainContent {
+        transition: all 0.3s;
+        margin-left: 250px; /* 預設側邊欄寬度 */
+      }
+      
+      .sidebar-expanded {
+        width: 250px;
+      }
+      
+      .sidebar-collapsed {
+        width: 60px;
+      }
+      
+      .sidebar-collapsed .nav-link-text {
+        display: none;
+      }
+      
+      .text-green {
+        color: #198754;
+      }
+      
+      .navbar {
+        box-shadow: 0 2px 4px rgba(0,0,0,.1);
+        z-index: 1001; /* 確保導航欄在最上層 */
+      }
+      
+      /* 修正子選單顯示問題 */
+      .submenu {
+        max-height: 300px;
+        overflow-y: auto;
+        position: relative;
+        z-index: 1000;
+      }
+      
+      /* 當側邊欄收起時調整 */
+      .sidebar-collapsed + #mainContent {
+        margin-left: 60px;
+      }
+      
+      /* 為子選單項目添加更清晰的樣式 */
+      .submenu .list-group-item {
+        background-color: #f8f9fa;
+      }
+      
+      .submenu .list-group-item:hover {
+        background-color: #e9ecef;
+      }
+      
+      /* 提高選單與子選單的區隔 */
+      .submenu-toggle {
+        cursor: pointer;
+      }
+    </style>
+    {% block extra_css %}{% endblock %}
+  </head>
+  <body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white fixed-top border-bottom">
+      <div class="container-fluid">
+        <button class="btn" id="sidebarToggle">
+          <i class="fas fa-bars"></i>
+        </button>
+        <a class="navbar-brand ms-2 fw-bold" href="/">輿情大數據</a>
+        <div class="ms-auto">
+          <!-- 預留 navbar 右邊區塊 -->
+        </div>
+      </div>
+    </nav>
+
+    <div class="container-fluid">
+      <div class="row">
+        <!-- Sidebar -->
+        <nav id="sidebar" class="sidebar-expanded bg-white border-end p-0">
+          <div class="list-group list-group-flush p-2">
+            <!-- 熱門分析 -->
+            <div class="mb-1">
+              <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center submenu-toggle border-0">
+                <span class="nav-link-text"><i class="fas fa-fire me-2"></i>熱門分析</span>
+                <i class="fas fa-chevron-down"></i>
+              </button>
+              <div class="collapse submenu ms-4">
+                <a class="list-group-item list-group-item-action border-0 py-1" href="{% url 'app_top_keyword:home' %}">熱門關鍵詞分析</a>
+                <a class="list-group-item list-group-item-action border-0 py-1" href="{% url 'app_top_person:home' %}">熱門人物排行分析</a>
+                <a class="list-group-item list-group-item-action border-0 py-1" href="#">命名實體熱門分析</a>
+                <a class="list-group-item list-group-item-action border-0 py-1 text-green" href="#">昨日誰最大</a>
+              </div>
+            </div>
+
+            <!-- 進階查詢 -->
+            <div class="mb-1">
+              <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center submenu-toggle border-0">
+                <span class="nav-link-text"><i class="fas fa-search me-2"></i>進階查詢</span>
+                <i class="fas fa-chevron-down"></i>
+              </button>
+              <div class="collapse submenu ms-4">
+                <a class="list-group-item list-group-item-action border-0 py-1" href="{% url 'app_user_keyword:home' %}">自訂關鍵詞熱門度分析</a>
+                <a class="list-group-item list-group-item-action border-0 py-1" href="{% url 'app_user_keyword_association:home' %}">自訂全文檢索與關聯分析</a>
+                <a class="list-group-item list-group-item-action border-0 py-1" href="{% url 'app_user_keyword_sentiment:home' %}">自訂關鍵詞之情緒分析</a>
+              </div>
+            </div>
+
+            <!-- 特色分析 -->
+            <div class="mb-1">
+              <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center submenu-toggle border-0">
+                <span class="nav-link-text"><i class="fas fa-star me-2"></i>特色分析</span>
+                <i class="fas fa-chevron-down"></i>
+              </button>
+              <div class="collapse submenu ms-4">
+                <a class="list-group-item list-group-item-action border-0 py-1 text-green" href="{% url 'app_trump:home' %}">川普聲量我最大</a>
+                <a class="list-group-item list-group-item-action border-0 py-1 text-green" href="{% url 'app_hot_news:home' %}">熱門新聞聲量觀測站</a>
+                <a class="list-group-item list-group-item-action border-0 py-1" href="#">政黨聲量排行榜</a>
+                <a class="list-group-item list-group-item-action border-0 py-1" href="#">政治人物聲量排行榜</a>
+                <a class="list-group-item list-group-item-action border-0 py-1 text-green" href="#">事件人物聲量相關分析</a>
+              </div>
+            </div>
+
+            <!-- 新聞推薦系統 -->
+            <div class="mb-1">
+              <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center submenu-toggle border-0">
+                <span class="nav-link-text"><i class="fa-solid fa-newspaper me-2"></i>新聞推薦系統</span>
+                <i class="fas fa-chevron-down"></i>
+              </button>
+              <div class="collapse submenu ms-4">
+                <a class="list-group-item list-group-item-action border-0 py-1 text-green" href="#">Bert/Qwen新聞推薦-新聞查找相似新聞</a>
+              </div>
+            </div>
+
+            <!-- NLP應用 -->
+            <div class="mb-1">
+              <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center submenu-toggle border-0">
+                <span class="nav-link-text"><i class="fas fa-brain me-2"></i>自然語言理解</span>
+                <i class="fas fa-chevron-down"></i>
+              </button>
+              <div class="collapse submenu ms-4">
+                <a class="list-group-item list-group-item-action border-0 py-1 text-green" href="#">語言模型Bert/Qwen情緒分類</a>
+                <a class="list-group-item list-group-item-action border-0 py-1 text-green" href="#">語言模型Bert/Qwen新聞分類</a>
+              </div>
+            </div>
+
+            <!-- 使用資料庫 -->
+            <div class="mb-1">
+              <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center submenu-toggle border-0">
+                <span class="nav-link-text"><i class="fa-solid fa-database me-2"></i>使用DB</span>
+                <i class="fas fa-chevron-down"></i>
+              </button>
+              <div class="collapse submenu ms-4">
+                <a class="list-group-item list-group-item-action border-0 py-1 text-green" href="{% url 'app_user_keyword_db:home' %}">後台資料庫查詢</a>
+                <a class="list-group-item list-group-item-action border-0 py-1 text-green" href="{% url 'app_top_person_db:calculate_top_person' %}">熱門人物立刻計算(管理者定時執行)</a>
+                <a class="list-group-item list-group-item-action border-0 py-1 text-green" href="{% url 'app_top_person_db:home' %}">熱門人物(從資料庫查詢)</a>
+                <a class="list-group-item list-group-item-action border-0 py-1 text-green" href="#">昨日新聞資料庫全文檢索</a>
+              </div>
+            </div>
+
+            <!-- 其他項目略... -->
+          </div>
+        </nav>
+
+        <!-- Main content area -->
+        <main id="mainContent" class="p-3 pt-4">
+          {% block content %}
+          {% endblock %}
+        </main>
+      </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap JS bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const toggleBtn = document.getElementById('sidebarToggle');
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('mainContent');
+        const navLinkTexts = document.querySelectorAll('.nav-link-text');
+
+        // 確保子選單可見性
+        function handleSubmenuVisibility() {
+          // 確保子選單顯示在視窗內
+          document.querySelectorAll('.submenu.show').forEach(submenu => {
+            const rect = submenu.getBoundingClientRect();
+            
+            // 如果選單底部超出視窗，調整其最大高度
+            if (rect.bottom > window.innerHeight) {
+              submenu.style.maxHeight = (window.innerHeight - rect.top - 20) + 'px';
+            }
+          });
+        }
+
+        // 初始化所有子選單
+        document.querySelectorAll('.submenu-toggle').forEach(toggle => {
+          toggle.addEventListener('click', function() {
+            const submenu = this.nextElementSibling;
+            const bsCollapse = new bootstrap.Collapse(submenu, {
+              toggle: true
+            });
+            
+            // 子選單打開後檢查可見性
+            submenu.addEventListener('shown.bs.collapse', handleSubmenuVisibility);
+            
+            // 切換圖標
+            const icon = this.querySelector('.fa-chevron-down, .fa-chevron-up');
+            icon.classList.toggle('fa-chevron-down');
+            icon.classList.toggle('fa-chevron-up');
+          });
+        });
+
+        // 側邊欄切換功能
+        toggleBtn.addEventListener('click', function() {
+          if (sidebar.classList.contains('sidebar-expanded')) {
+            sidebar.classList.remove('sidebar-expanded');
+            sidebar.classList.add('sidebar-collapsed');
+            navLinkTexts.forEach(text => {
+              text.style.display = 'none';
+            });
+            
+            // 收起側邊欄時關閉所有展開的子選單
+            document.querySelectorAll('.submenu.show').forEach(menu => {
+              const bsCollapse = bootstrap.Collapse.getInstance(menu);
+              if (bsCollapse) bsCollapse.hide();
+            });
+            
+            // 調整主內容區域
+            mainContent.style.marginLeft = '60px';
+          } else {
+            sidebar.classList.remove('sidebar-collapsed');
+            sidebar.classList.add('sidebar-expanded');
+            navLinkTexts.forEach(text => {
+              text.style.display = 'inline';
+            });
+            
+            // 調整主內容區域
+            mainContent.style.marginLeft = '250px';
+          }
+        });
+        
+        // 在視窗調整大小時檢查子選單的可見性
+        window.addEventListener('resize', handleSubmenuVisibility);
+      });
+    </script>
+
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>
