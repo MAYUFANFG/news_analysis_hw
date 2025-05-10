@@ -21,8 +21,9 @@ urlpatterns = [
     path('userkeyword_db/', include('app_user_keyword_db.urls')),
     # full text search and associated keyword display using db
     path('topperson_keyword_db/', include('app_top_person_db.urls')),
-
-
+    # user keyword sentiment 
+    path('userkeyword_report/', include('app_user_keyword_llm_report.urls')),
+    
     # admin 後台資料庫管理
     path('admin/', admin.site.urls),
 

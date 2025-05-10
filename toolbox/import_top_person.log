@@ -1,0 +1,7 @@
+2025-05-05 15:55:21,044 - INFO - 開始讀取CSV檔案: D:\bigdata\hw\news_analysis_hw\news_analysis_hw\toolbox\..\app_top_person\dataset\top_person_data.csv
+2025-05-05 15:55:21,048 - INFO - CSV檔案總行數: 4
+2025-05-05 15:55:21,054 - INFO - 建立新的TopPerson物件，類別: 政治
+2025-05-05 15:55:21,055 - INFO - 建立新的TopPerson物件，類別: 政經
+2025-05-05 15:55:21,056 - INFO - 建立新的TopPerson物件，類別: 全球
+2025-05-05 15:55:21,057 - INFO - 建立新的TopPerson物件，類別: 全部
+2025-05-05 15:55:21,134 - INFO - 匯入完成，成功: 4，失敗: 0
