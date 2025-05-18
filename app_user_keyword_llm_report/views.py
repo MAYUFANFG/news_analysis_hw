@@ -15,12 +15,14 @@ import json
 
    
 import requests
-url = "http://163.18.22.32:11435/api/generate"
+url = "http://192.168.1.106:11434/api/generate"
 # 設置遠程 Ollama 模型的基礎 URL
-REMOTE_OLLAMA_URL = "http://163.18.22.32:11435"
+REMOTE_OLLAMA_URL = "http://192.168.1.106:11434"
 
-model_name = "gemma3:4b"  # 默認模型名稱
+# model_name = "gemma3:4b"  # 默認模型名稱
 # model_name = "qwen2.5:7b"  # 默認模型名稱
+model_name = "gemma3:27b"  # 默認模型名稱
+# model_name = "qwen3:14b"  # 默認模型名稱
 #model_name = "deepseek-r1:14b"  # 默認模型名稱
 # 列出所有可用的模型
 print(f"正在連接 {REMOTE_OLLAMA_URL} 檢查可用模型...")
